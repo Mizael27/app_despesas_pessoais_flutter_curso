@@ -1,3 +1,8 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+
 import 'components/chart.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +19,10 @@ class ExpensesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Definir para o aplicativo rodar apenas em modo retrato
+    //SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    //SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight]);
+
     final ThemeData tema = ThemeData();
     return MaterialApp(
         home: MyHomePage(),
@@ -68,7 +77,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final List<Transaction> _transactions = [];
-
+  bool _showChart = false;
   List<Transaction> get _recentTransactions {
     return _transactions.where((tr) {
       // filtramos apenas as transações recentes
@@ -108,30 +117,130 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  Widget _getIconButton(IconData icon, Function() fn) {
+    return Platform.isIOS
+        ? GestureDetector(
+            onTap: fn,
+            child: Icon(icon),
+          )
+        : IconButton(
+            onPressed: fn,
+            icon: Icon(icon),
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Despesas Pessoas'),
-        actions: [
-          IconButton(
-            onPressed: () => _openTransactionFormModal(context),
-            icon: Icon(Icons.add),
-          )
-        ],
+    final mediaQuery = MediaQuery.of(context);
+    bool isLandscape = mediaQuery.orientation == Orientation.landscape;
+
+    final iconList = Platform.isIOS ? CupertinoIcons.refresh : Icons.list;
+    final chartList =
+        Platform.isIOS ? CupertinoIcons.refresh : Icons.show_chart;
+
+    final actions = [
+      if (isLandscape)
+        _getIconButton(_showChart ? iconList : chartList, () {
+          setState(() {
+            _showChart = !_showChart;
+          });
+        }),
+      _getIconButton(Platform.isIOS ? CupertinoIcons.add : Icons.add,
+          () => _openTransactionFormModal(context)),
+    ];
+
+    final PreferredSizeWidget appBar =
+        //Platform.isIOS
+        //     ? CupertinoPageScaffold(
+        //         navigationBar: CupertinoNavigationBar(
+        //           middle: Text('Despesas Pessoais'),
+        //           trailing: Row(
+        //             mainAxisSize: MainAxisSize.min,
+        //             children: actions,
+        //           ),
+        //         ),
+        //       )
+        //     : AppBar(
+        //         title: Text(
+        //           'Despesas Pessoas',
+        //           style: TextStyle(fontSize: 20 * mediaQuery.textScaleFactor),
+        //         ),
+        //         actions: actions,
+        //       );
+
+        // final appBar = Platform.isIOS
+        //     ? CupertinoNavigationBar(
+        //         middle: Text('Despesas Pessoais'),
+        //         trailing: Row(
+        //           mainAxisSize: MainAxisSize.min,
+        //           children: actions,
+        //         ),
+        //       )
+        //     :
+        AppBar(
+      title: Text(
+        'Despesas Pessoas',
+        style: TextStyle(fontSize: 20 * mediaQuery.textScaleFactor),
       ),
-      body: SingleChildScrollView(
+      actions: actions,
+    );
+
+    final availableHeight = mediaQuery.size.height -
+        appBar.preferredSize.height -
+        mediaQuery.padding.top;
+
+    final bodyPage = SafeArea(
+      child: SingleChildScrollView(
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Chart(_recentTransactions),
-              TransactionList(_transactions, _removeTransaction),
+              // // Alternativa anterior usando switch
+              // if (isLandscape)
+              //   Row(
+              //     mainAxisAlignment: MainAxisAlignment.center,
+              //     children: [
+              //       Text('Exibir Gráfico'),
+              // Aptative deixa no padrao do ios no ios e vice versa
+              //       Switch.adaptive(
+              //         value: _showChart,
+              //         onChanged: (value) {
+              //           setState(() {
+              //             _showChart = value;
+              //           });
+              //         },
+              //       ),
+              //     ],
+              //   ),
+              if (_showChart || !isLandscape)
+                Container(
+                  height: availableHeight * (isLandscape ? 0.8 : 0.25),
+                  child: Chart(_recentTransactions),
+                ),
+              if (!_showChart || !isLandscape)
+                Container(
+                  height: availableHeight * (isLandscape ? 1 : 0.7),
+                  child: TransactionList(_transactions, _removeTransaction),
+                ),
             ]),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openTransactionFormModal(context),
-        child: Icon(Icons.add),
-      ),
+    );
+
+    return
+        // return Platform.isIOS
+        //     ? CupertinoPageScaffold(
+        //         navigationBar: appBar,
+        //         child: bodyPage,
+        //       )
+        //     :
+        Scaffold(
+      appBar: appBar,
+      body: bodyPage,
+      floatingActionButton: Platform.isIOS
+          ? Container()
+          : FloatingActionButton(
+              onPressed: () => _openTransactionFormModal(context),
+              child: Icon(Icons.add),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
