@@ -1,3 +1,4 @@
+import 'components/chart.dart';
 import 'package:flutter/material.dart';
 
 import 'dart:math';
@@ -19,6 +20,14 @@ class ExpensesApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.purple,
           fontFamily: 'Belanosima',
+          textTheme: ThemeData.light().textTheme.copyWith(
+              titleMedium: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              labelMedium: TextStyle(
+                color: Colors.white,
+              )),
           appBarTheme: AppBarTheme(
               // titleTextStyle: ThemeData.light().textTheme.copyWith(
               //       titleLarge: TextStyle(
@@ -58,20 +67,16 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _transactions = [
-    Transaction(
-      id: 't1',
-      title: 'Tenis de corrida',
-      value: 22,
-      date: DateTime.now(),
-    ),
-    Transaction(
-      id: 't1',
-      title: 'Tenis de corrida',
-      value: 22,
-      date: DateTime.now(),
-    ),
-  ];
+  final List<Transaction> _transactions = [];
+
+  List<Transaction> get _recentTransactions {
+    return _transactions.where((tr) {
+      // filtramos apenas as transações recentes
+      return tr.date.isAfter(DateTime.now().subtract(
+        Duration(days: 7),
+      ));
+    }).toList();
+  }
 
   _openTransactionFormModal(BuildContext context) {
     showModalBottomSheet(
@@ -81,12 +86,12 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
-  _addTransaction(String title, double value) {
+  _addTransaction(String title, double value, DateTime date) {
     final newTransaction = Transaction(
       id: Random().nextDouble().toString(),
       title: title,
       value: value,
-      date: DateTime.now(),
+      date: date,
     );
 
     setState(() {
@@ -112,14 +117,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Container(
-                width: double.infinity,
-                child: Card(
-                  color: Colors.blue,
-                  child: Text('Gráfico'),
-                  elevation: 5,
-                ),
-              ),
+              Chart(_recentTransactions),
               TransactionList(_transactions),
             ]),
       ),
